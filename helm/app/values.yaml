@@ -1,21 +1,76 @@
+replicaCount: 2
+
 image:
-  repository: postgres
-  tag: "16-alpine"
+  repository: ivykiera/devops-helm-repo-app
+  tag: "latest"
   pullPolicy: IfNotPresent
 
-auth:
-  username: appuser
-  password: "please-change-me"   # CHANGE for real use
-  database: appdb
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""   # let helpers generate the name
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+# Your app listens on 8080 inside the container (from Dockerfile)
+containerPort: 8080
 
 service:
-  type: ClusterIP
-  port: 5432
+  type: NodePort
+  port: 80
+  nodePort: 30080   # optional; choose any free 30000-32767 or remove to let k8s assign
 
-persistence:
-  enabled: false                 # set true later when you install a default StorageClass
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
 
+resources: {}
+#  limits:
+#    cpu: 500m
+#    memory: 512Mi
+#  requests:
+#    cpu: 100m
+#    memory: 128Mi
+
+# Probes must hit port 8080 (container’s real port)
 livenessProbe:
-  tcpSocket: { port: 5432 }
+  httpGet:
+    path: /
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 20
+
 readinessProbe:
-  tcpSocket: { port: 5432 }
+  httpGet:
+    path: /
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
