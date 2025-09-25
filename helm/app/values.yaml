@@ -9,11 +9,23 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+deployment:
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/instance: app
+  containerPort: 8080
+service:
+  port: 80
+  targetPort: 8080
+  selector:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/instance: app
+
 serviceAccount:
   create: true
   automount: true
   annotations: {}
-  name: ""   # let helpers generate the name
+  name: ""   # Let helpers generate the name
 
 podAnnotations: {}
 podLabels: {}
@@ -21,23 +33,37 @@ podLabels: {}
 podSecurityContext: {}
 securityContext: {}
 
-# Your app listens on 8080 inside the container (from Dockerfile)
+# Environment variables for PostgreSQL connectivity
+env:
+  DB_HOST: postgres.demo.svc.cluster.local
+  DB_PORT: "5432"
+  DB_USER: appuser   # Replace with actual username from postgres secret
+  DB_PASSWORD: pasima   # Replace with actual password from postgres secret
+  DB_NAME: appdb   # Replace with actual database name
+
+# Container listens on 8080 (from Dockerfile)
 containerPort: 8080
 
 service:
-  type: NodePort
+  type: ClusterIP   # Changed to ClusterIP since Ingress will handle external access
   port: 80
-  nodePort: 30080   # optional; choose any free 30000-32767 or remove to let k8s assign
+  targetPort: 8080   # Explicitly map to container port
 
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
+  enabled: true
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: "200"
   hosts:
-    - host: chart-example.local
+    - host: chart-example.com
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
   tls: []
 
 resources: {}
@@ -48,19 +74,18 @@ resources: {}
 #    cpu: 100m
 #    memory: 128Mi
 
-# Probes must hit port 8080 (container’s real port)
+# Probes hit port 8080
 livenessProbe:
   httpGet:
     path: /
     port: 8080
-  initialDelaySeconds: 10
+  initialDelaySeconds: 30 # Increase if app startup is slow
   periodSeconds: 20
-
 readinessProbe:
   httpGet:
     path: /
     port: 8080
-  initialDelaySeconds: 5
+  initialDelaySeconds: 15 # Increase if app startup is slow
   periodSeconds: 10
 
 autoscaling:
@@ -73,4 +98,3 @@ autoscaling:
 nodeSelector: {}
 tolerations: []
 affinity: {}
-

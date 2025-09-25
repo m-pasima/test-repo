@@ -1,6 +1,6 @@
 apiVersion: v2
 name: app
-description: Beautiful Node.js app that connects to PostgreSQL and is exposed via Ingress
+description: A Node.js app that connects to PostgreSQL and is exposed via Ingress
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
