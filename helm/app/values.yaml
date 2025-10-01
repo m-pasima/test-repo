@@ -35,7 +35,7 @@ securityContext: {}
 
 # Environment variables for PostgreSQL connectivity
 env:
-  DB_HOST: postgres.demo.svc.cluster.local
+  DB_HOST: postgres
   DB_PORT: "5432"
   DB_USER: appuser   # Replace with actual username from postgres secret
   DB_PASSWORD: pasima   # Replace with actual password from postgres secret
@@ -50,50 +50,57 @@ service:
   targetPort: 8080   # Explicitly map to container port
 
 ingress:
+  # Ingress is enabled by default and preconfigured for EKS ALB
   enabled: true
   className: alb
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/healthcheck-path: /
+    # Align health check with app endpoint
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
     alb.ingress.kubernetes.io/success-codes: "200"
+    # If external-dns is installed, this creates the DNS record automatically
+    external-dns.alpha.kubernetes.io/hostname: eks.globalheartassociation.com
   hosts:
-    - host: chart-example.com
+    - host: eks.globalheartassociation.com  # <- set this to your domain
       paths:
         - path: /
           pathType: Prefix
   tls: []
 
-resources: {}
-#  limits:
-#    cpu: 500m
-#    memory: 512Mi
-#  requests:
-#    cpu: 100m
-#    memory: 128Mi
+# Resources are defined below under "Right-size resources"
 
 # Probes hit port 8080
 livenessProbe:
   httpGet:
-    path: /
+    path: /healthz
     port: 8080
-  initialDelaySeconds: 30 # Increase if app startup is slow
-  periodSeconds: 20
+  initialDelaySeconds: 20
+  periodSeconds: 15
 readinessProbe:
   httpGet:
-    path: /
+    path: /healthz
     port: 8080
-  initialDelaySeconds: 15 # Increase if app startup is slow
+  initialDelaySeconds: 10
   periodSeconds: 10
 
 autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 80
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 20
   # targetMemoryUtilizationPercentage: 80
+
+# Right-size resources so HPA has a baseline
+resources:
+  requests:
+    cpu: 1m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
 
 nodeSelector: {}
 tolerations: []

@@ -1,0 +1,8 @@
+# Node, editor and OS cruft
+node_modules/
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.tmp
+*.log

@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "app.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "app.selectorLabels" . | nindent 6 }}
@@ -24,6 +26,13 @@ spec:
         - name: {{ include "app.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: APP_NAME
+              value: {{ include "app.name" . | quote }}
+            - name: PORT
+              value: "{{ .Values.containerPort }}"
+            - name: DB_URL
+              value: "postgresql://{{ .Values.env.DB_USER }}:{{ .Values.env.DB_PASSWORD }}@{{ .Values.env.DB_HOST }}:{{ .Values.env.DB_PORT }}/{{ .Values.env.DB_NAME }}"
           ports:
             - name: http
               containerPort: 8080

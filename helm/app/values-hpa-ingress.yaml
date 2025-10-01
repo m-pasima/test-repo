@@ -1,0 +1,55 @@
+# Override values to enable Ingress + HPA
+
+# Base replica count is ignored when HPA is enabled, but kept for initial rollout
+replicaCount: 2
+
+resources:
+  # Requests are important because HPA target is based on utilization of requests
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  # EKS with AWS Load Balancer Controller
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: "200"
+    # Optional: share ALB across ingresses
+    # alb.ingress.kubernetes.io/group.name: demo
+  hosts:
+    - host: eks.globalheartassociation.com   # <-- change to your domain
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Align probes with the app's health endpoint
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 20
+  periodSeconds: 15
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  # Target 60% average CPU utilization across pods
+  targetCPUUtilizationPercentage: 20
+   targetMemoryUtilizationPercentage: 20
